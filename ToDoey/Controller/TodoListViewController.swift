@@ -14,29 +14,15 @@ class TodoListViewController: UITableViewController {
     var ItemArray = [Item]()
     let defaults = UserDefaults.standard
     let todoArrayKey = "toDoListArray"
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        createItems()
-        if let items = defaults.array(forKey: todoArrayKey) as? [Item] {
-            ItemArray = items
-        }
+       
+        loadData()
         
         }
-    
-    func createItems() {
-        let item1 = Item()
-        item1.title = "Find Mike"
-        ItemArray.append(item1)
-        let item2 = Item()
-        item2.title = "buy Milk"
-        ItemArray.append(item2)
-        let item3 = Item()
-        item3.title = "Call Jack"
-        ItemArray.append(item3)
-        let item4 = Item()
-        item4.title = "Pay bill"
-        ItemArray.append(item4)
-    }
     
     
     @IBAction func addTodoTaskTapped(_ sender: Any) {
@@ -53,8 +39,8 @@ class TodoListViewController: UITableViewController {
             let newItem = Item()
             newItem.title = textField.text!
             self.ItemArray.append(newItem)
-            self.defaults.set(self.ItemArray, forKey: self.todoArrayKey)
-            self.tableView.reloadData()
+            self.saveItem()
+            
         }
     
         let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
@@ -67,7 +53,37 @@ class TodoListViewController: UITableViewController {
         present(alert, animated: true, completion: nil)
         
     }
-
+    
+    // MARK: - Save data Methods
+    
+    
+    // Save Items on a plist method
+    func saveItem() {
+        let endoder = PropertyListEncoder()
+        do {
+            let data = try endoder.encode(self.ItemArray)
+            try data.write(to: self.dataFilePath!)
+        } catch {
+            print("Error - \(error)")
+        }
+        self.tableView.reloadData()
+    }
+    
+    // Load data method
+    
+    func loadData() {
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            let decoder = PropertyListDecoder()
+            do {
+                ItemArray = try decoder.decode([Item].self, from: data)
+            } catch {
+                print("error - \(error)")
+            }
+            
+        }
+        
+        
+    }
     // MARK: - Table view data source
 
     
@@ -92,6 +108,7 @@ class TodoListViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let item = ItemArray[indexPath.row]
         item.done = !item.done
+        saveItem()
         tableView.deselectRow(at: indexPath, animated: true)
         tableView.reloadData()
     }
