@@ -7,18 +7,24 @@
 //
 
 import UIKit
+import CoreData
 
 class TodoListViewController: UITableViewController {
 
-    let toDoCell = "ToDoItemCell"
-    var ItemArray = [Item]()
-    let defaults = UserDefaults.standard
-    let todoArrayKey = "toDoListArray"
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    
+        var ItemArray = [Item]()
+        let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var selectedCategory: Catagory? {
+        didSet {
+            
+        }
+    }
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
+       let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+        print(dataFilePath)
        
         loadData()
         
@@ -28,22 +34,27 @@ class TodoListViewController: UITableViewController {
     @IBAction func addTodoTaskTapped(_ sender: Any) {
         addTodoTask()
         
-        
     }
+    // MARK: - Add new Todo list
+    
     func addTodoTask() {
         var textField = UITextField()
         
         let alert = UIAlertController(title: "Add Todo Item", message: "", preferredStyle: .alert)
         
         let addItemAction = UIAlertAction(title: "Add", style: .default) { (action) in
-            let newItem = Item()
+           
+            let newItem = Item(context: self.context)
             newItem.title = textField.text!
+            newItem.done = false
+            newItem.parentCatagory = self.selectedCategory
             self.ItemArray.append(newItem)
             self.saveItem()
             
         }
     
         let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        
         alert.addTextField { (alertTextField: UITextField) in
             alertTextField.placeholder = "Add new todo item here"
             textField = alertTextField
@@ -59,31 +70,37 @@ class TodoListViewController: UITableViewController {
     
     // Save Items on a plist method
     func saveItem() {
-        let endoder = PropertyListEncoder()
+        
         do {
-            let data = try endoder.encode(self.ItemArray)
-            try data.write(to: self.dataFilePath!)
+           try context.save()
         } catch {
-            print("Error - \(error)")
+            print("Error saving message \(error)")
         }
         self.tableView.reloadData()
     }
     
     // Load data method
     
-    func loadData() {
-        if let data = try? Data(contentsOf: dataFilePath!) {
-            let decoder = PropertyListDecoder()
-            do {
-                ItemArray = try decoder.decode([Item].self, from: data)
-            } catch {
-                print("error - \(error)")
-            }
-            
+    func loadData(With request: NSFetchRequest<Item> = Item.fetchRequest(), predicate: NSPredicate? = nil) {
+        
+        let catagorypredicate = NSPredicate(format: "parentCatagory.catagoryItem MATCHES %@", (selectedCategory?.catagoryItem)!)
+        if let addtionalPredicate = predicate {
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [catagorypredicate, addtionalPredicate])
+        } else {
+            request.predicate = catagorypredicate
         }
         
         
-    }
+          do {
+                ItemArray = try context.fetch(request)
+            } catch {
+                print("Error while fatching data \(error)")
+            }
+            tableView.reloadData()
+        }
+    
+    
+    
     // MARK: - Table view data source
 
     
@@ -95,7 +112,7 @@ class TodoListViewController: UITableViewController {
 
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: toDoCell, for: indexPath)
+        let cell = tableView.dequeueReusableCell(withIdentifier: Keys.itemCell, for: indexPath)
         let item = ItemArray[indexPath.row]
         cell.textLabel?.text = item.title
         cell.accessoryType = item.done ? .checkmark : .none
@@ -107,6 +124,8 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let item = ItemArray[indexPath.row]
+//        context.delete(item)
+//        ItemArray.remove(at: indexPath.row)
         item.done = !item.done
         saveItem()
         tableView.deselectRow(at: indexPath, animated: true)
@@ -115,3 +134,32 @@ class TodoListViewController: UITableViewController {
     
 
 }
+
+extension TodoListViewController: UISearchBarDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request: NSFetchRequest<Item> = Item.fetchRequest()
+        
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        
+        
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        loadData(With: request, predicate: predicate)
+        
+    }
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadData()
+            
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+                
+            }
+            
+            
+        }
+    }
+    
+}
+
