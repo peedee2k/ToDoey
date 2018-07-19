@@ -11,7 +11,7 @@ import RealmSwift
 
 class CatagoryTableView: UITableViewController {
     
-    var catagoryArray: Results<Catagory>?
+    var catagotyList: Results<Catagory>?
     
     let realm = try! Realm()
     
@@ -28,12 +28,12 @@ class CatagoryTableView: UITableViewController {
 // MARK: - TableView DataSource Method
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return catagoryArray?.count ?? 1
+        return catagotyList?.count ?? 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: Keys.catagoryCell, for: indexPath)
-        cell.textLabel?.text = catagoryArray?[indexPath.row].name ?? "No Catagories Added"
+        cell.textLabel?.text = catagotyList?[indexPath.row].name ?? "No Catagories Added"
         
         return cell
     }
@@ -49,7 +49,7 @@ class CatagoryTableView: UITableViewController {
             let destinationVC = segue.destination as! TodoListViewController
             
            if let indexPath = tableView.indexPathForSelectedRow {
-                destinationVC.selectedCategory = catagoryArray?[indexPath.row]
+                destinationVC.selectedCategory = catagotyList?[indexPath.row]
             }
             
             
@@ -82,6 +82,7 @@ class CatagoryTableView: UITableViewController {
             textField = alertTextField
         }
         
+        
         let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
        
         alert.addAction(addButton)
@@ -105,7 +106,7 @@ class CatagoryTableView: UITableViewController {
     
     func loadCatagories() {
         
-        catagoryArray = realm.objects(Catagory.self)
+        catagotyList = realm.objects(Catagory.self)
         
 //        let request: NSFetchRequest<Catagory> = Catagory.fetchRequest()
 //
