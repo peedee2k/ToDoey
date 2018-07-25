@@ -8,8 +8,12 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class TodoListViewController: UITableViewController {
+    
+    
+    @IBOutlet weak var searchBar: UISearchBar!
     
     let realm = try! Realm()
     var toDoItems: Results<Item>?
@@ -25,10 +29,35 @@ class TodoListViewController: UITableViewController {
         super.viewDidLoad()
         let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
         print(dataFilePath)
-        
+        tableView.separatorStyle = .none
         loadData()
         
     }
+    
+    
+    override func viewWillAppear(_ animated: Bool) {
+        guard let hexColor = selectedCategory?.cellColor  else { fatalError() }
+        title = selectedCategory!.name
+       updateNavBar(withHexCode: hexColor)
+        
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(withHexCode: "1D9BF6")
+    }
+    
+    //MARK:- NavBar Setup Method
+    
+    func updateNavBar(withHexCode colorHexCode: String) {
+       
+        guard let navBar = navigationController?.navigationBar else { fatalError("Navigation Controller does not exist")}
+        guard let barColor = UIColor(hexString: colorHexCode) else  { fatalError() }
+        navBar.barTintColor = barColor
+        searchBar.barTintColor = barColor
+        navBar.tintColor = ContrastColorOf(barColor, returnFlat: true)
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor: ContrastColorOf(barColor, returnFlat: true)]
+    }
+    
     
     
     @IBAction func addTodoTaskTapped(_ sender: Any) {
@@ -88,7 +117,7 @@ class TodoListViewController: UITableViewController {
     // Load data method
     
     func loadData() {
-        toDoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
+        toDoItems = selectedCategory?.items.sorted(byKeyPath: "dateCreated", ascending: true)
         tableView.reloadData()
     }
     
@@ -109,6 +138,15 @@ class TodoListViewController: UITableViewController {
         if let item = toDoItems?[indexPath.row] {
             cell.textLabel?.text = item.title
             cell.accessoryType = item.done ? .checkmark : .none
+            
+            let cellColor = UIColor(hexString: (selectedCategory?.cellColor)!)
+            
+            if let color = cellColor?.darken(byPercentage:
+                CGFloat(indexPath.row) / CGFloat(toDoItems!.count)) {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
+            
         } else {
             cell.textLabel?.text = "No Items Added"
         }
@@ -125,7 +163,7 @@ class TodoListViewController: UITableViewController {
             do {
                 try realm.write {
                     // to delete object
-                   // realm.delete(item)
+                    // realm.delete(item)
                     // I would prefere to do this on tableview delegate method did commit
                     item.done = !item.done
                 }
@@ -134,6 +172,8 @@ class TodoListViewController: UITableViewController {
             }
             tableView.reloadData()
         }
+        
+        
         //        let item = toDoItems![indexPath.row]
         //        context.delete(item)
         //        ItemArray.remove(at: indexPath.row)
@@ -142,6 +182,30 @@ class TodoListViewController: UITableViewController {
         //        tableView.deselectRow(at: indexPath, animated: true)
         //        tableView.reloadData()
     }
+    
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            guard let item = toDoItems?[indexPath.row] else { return }
+            do {
+                try realm.write {
+                     realm.delete(item)
+            
+                }
+            } catch {
+                print("Error while deleting row: \(error)")
+            }
+            tableView.reloadData()
+        }
+    }
+//    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+//        let modifyAction = UIContextualAction(style: .normal, title: "Delete", handler: { (ac: UIContextualAction, view: UIView, success:(Bool) -> Void) in
+//            success(true)
+//        })
+//        //modifyAction.image = UIImage(named: "delete-icon")
+//        
+//        modifyAction.backgroundColor = UIColor.red
+//        return UISwipeActionsConfiguration(actions: [modifyAction])
+//    }
     
     
 }

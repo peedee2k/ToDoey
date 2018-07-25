@@ -7,8 +7,7 @@ target 'ToDoey' do
 
 # Pods for ToDoey
    
-	 pod 'RealmSwift'
-
-	pod 'SwipeCellKit'
-
+	pod 'RealmSwift'
+    pod 'ChameleonFramework/Swift', :git => 'https://github.com/ViccAlexander/Chameleon.git'
+	
 end

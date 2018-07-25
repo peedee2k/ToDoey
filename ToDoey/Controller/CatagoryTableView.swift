@@ -8,7 +8,8 @@
 
 import UIKit
 import RealmSwift
-import SwipeCellKit
+import ChameleonFramework
+//import SwipeCellKit
 
 class CatagoryTableView: UITableViewController {
     
@@ -21,6 +22,7 @@ class CatagoryTableView: UITableViewController {
     override func viewDidLoad() {
     
         super.viewDidLoad()
+        tableView.separatorStyle = .none
         loadCatagories()
     }
     
@@ -34,7 +36,13 @@ class CatagoryTableView: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: Keys.catagoryCell, for: indexPath)
-        cell.textLabel?.text = catagotyList?[indexPath.row].name ?? "No Catagories Added"
+        if let catagory = catagotyList?[indexPath.row] {
+            cell.textLabel?.text = catagory.name
+            guard let color = UIColor(hexString: catagory.cellColor) else { fatalError() }
+            cell.backgroundColor = color
+            cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+        }
+       
         
         return cell
     }
@@ -44,6 +52,34 @@ class CatagoryTableView: UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         performSegue(withIdentifier: Keys.goToItemVC, sender: self)
     }
+    
+    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            if let catagory = catagotyList?[indexPath.row] {
+                do {
+                    try realm.write {
+                        realm.delete(catagory)
+                    }
+                } catch {
+                    print("Error deleting row: \(error)")
+                }
+            }
+        }
+        tableView.reloadData()
+        
+    }
+    
+
+//    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+//        let modifyAction = UIContextualAction(style: .normal, title: "Delete", handler: { (ac: UIContextualAction, view: UIView, success:(Bool) -> Void) in
+//            success(true)
+//        })
+//            //modifyAction.image = UIImage(named: "delete-icon")
+//        
+//            modifyAction.backgroundColor = UIColor.red
+//            return UISwipeActionsConfiguration(actions: [modifyAction])
+//        }
+  
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == Keys.goToItemVC {
@@ -73,6 +109,7 @@ class CatagoryTableView: UITableViewController {
         let addButton = UIAlertAction(title: "Add", style: .default) { (action) in
             let newCatagory = Catagory()
             newCatagory.name = textField.text!
+            newCatagory.cellColor = UIColor.randomFlat.hexValue()
            // self.catagoryArray.append(newCatagory)
             self.saveCatagories(catagories: newCatagory)
             
